@@ -3,8 +3,8 @@
 ### Description:
 	A not-so tiny library that simulates logic gates. and helps you
 	simulate the working of circuit. This library does not simulate
-	the logic gates itself but gives you the power to create different
-	logic IC's and opearate on them.
+	the operation of the logic gates itself but gives you the power
+	to create different gates and opearate on them.
 
 ### DISCLAIMER:
 	This library is at an alpha stage with no proper docs.
