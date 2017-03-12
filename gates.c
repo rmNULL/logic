@@ -1,10 +1,9 @@
 /*
  * gates.c: Implementation of gates.h header.
  * @author: rmNULL
- * Version: 0.8
+ * Version: 0.9
  * LICENSE: MIT, refer LICENSE for more.
- * Description: see README file.
- * credits: see README.
+ * Description: see README.
  */
 #include <stdbool.h>
 #include <stdio.h>
@@ -62,10 +61,8 @@ struct gate {
 /* checks if all the input pins of the given gate are set. */
 #define ARE_PINS_SET(gate) ((gate->set_pins) == (gate->total_pins))
 
-/* this need to be called after dealing with gate.
- * CALLING THIS IS MANDATORY.
- */
-void cleanup(struct gate *gate)
+/* destructor */
+void cleanup(struct gate *const gate)
 {
 	while (gate->unset_slots) {
 		free(slist_data(gate->unset_slots));
@@ -86,7 +83,7 @@ void cleanup(struct gate *gate)
  * failure.
  */
 #define mdfn(gatename, cls) \
-gatename create_##gatename##_gate(char *tag, size_t total_ip_pins) { \
+gatename create_##gatename##_gate(const char *tag, size_t total_ip_pins) { \
 	gatename gate;\
 	if (total_ip_pins < 2 || total_ip_pins > 64) {\
 		fprintf(stderr, "Error: Unable to create [%s %s] gate.", tag, gate_names[cls]);\
@@ -134,7 +131,7 @@ mdfn(Nand, NAND)
  * Not gate stands out from the crowd as it doesn't have variable number of
  * input pins. Maybe do a dirty hack and patch it in there, maybe?
  */
-Not create_Not_gate(char *tag)
+Not create_Not_gate(const char *tag)
 {
 	Not gate;
 	ALLOC_WITH_FAILURE_EXIT(gate, sizeof(struct gate));
@@ -165,7 +162,7 @@ Not create_Not_gate(char *tag)
  * Return Value:
  * 	Pin number on successful run, '-1' on failure.
  */
-static int find_pin_slot(struct gate *gate)
+static int find_pin_slot(struct gate *const gate)
 {
 	int current_pin;
 
@@ -191,31 +188,7 @@ static int find_pin_slot(struct gate *gate)
 }
 
 
-/*
- * get input by reading from stdin and set it to the current pin.
- * Usage: get_input(a1);
- */
-/* void get_input(struct gate *gate) */
-/* { */
-/* 	int current_pin; */
-
-/* 	if ((current_pin = find_pin_slot(gate)) == -1) */
-/* 		return; */
-
-/* 	int holder; */
-/* 	printf("[%s, %s] Pin(%d)%s ", gate_names[gate->class], gate->name, */
-/* 			current_pin, ">>>"); */
-/* 	scanf("%d", &holder); */
-
-/* 	if (holder != 0 && holder != 1) */
-/* 		fprintf(stderr, "%d will be considered true.\n", holder); */
-
-/* 	gate->pins[current_pin].ip.pin = holder; */
-/* 	gate->pins[current_pin].type = INTERNAL; */
-/* } */
-
-
-int set_pin(struct gate *gate, bool truth)
+int set_pin(struct gate *const gate, bool truth)
 {
 	int current_pin;
 
@@ -229,7 +202,7 @@ int set_pin(struct gate *gate, bool truth)
 	return current_pin;
 }
 
-int unset_pin(struct gate *gate, int pin_number)
+int unset_pin(struct gate *const gate, int pin_number)
 {
 	if (gate == NULL || gate->pins[pin_number].type == NUL
 		|| pin_number < 0 || pin_number >= gate->total_pins)
@@ -246,7 +219,9 @@ int unset_pin(struct gate *gate, int pin_number)
 }
 
 
-void short_pins(struct gate *dst, int dst_pin, struct gate *src, int src_pin, char type)
+void short_pins(struct gate *const dst, int dst_pin,
+		struct gate *const src, int src_pin,
+		char type)
 {
 
 	/* ERROR handling, hehe, more like error avoiding. */
@@ -293,7 +268,7 @@ void short_pins(struct gate *dst, int dst_pin, struct gate *src, int src_pin, ch
  * perofrm the 'or' operation on a given gate and return it's result to be
  * processed by calculate_output.
  */
-static bool or_op(Or gate)
+static bool or_op(Or const gate)
 {
 	bool truth = false;
 	for (int i = 1; i < gate->total_pins; ++i)
@@ -305,7 +280,7 @@ static bool or_op(Or gate)
 /*
  * same as the above function except it performs 'and' operation.
  */
-static bool and_op(And gate)
+static bool and_op(And const gate)
 {
 	bool truth = true;
 
@@ -319,7 +294,7 @@ static bool and_op(And gate)
 /*
  * similarly, perform 'xor' and return it's result for processing.
  */
-static bool xor_op(Xor gate)
+static bool xor_op(Xor const gate)
 {
 	bool truth = false;
 
@@ -333,7 +308,7 @@ static bool xor_op(Xor gate)
  * only calculates the gate output when all the inputs are set. Default case is
  * return faulty value.
  */
-static bool calculate_output(struct gate* gate)
+static bool calculate_output(struct gate* const gate)
 {
 	if (!ARE_PINS_SET(gate))
 		return false;
@@ -367,7 +342,7 @@ static bool calculate_output(struct gate* gate)
  * 	Calls calculate_output() to perform the logic and sets the
  * 	result of the call to the output pin(gate->op) of the given gate.
  */
-bool get_output(struct gate *gate)
+bool get_output(struct gate *const gate)
 {
 	bool output;
 
@@ -378,7 +353,7 @@ bool get_output(struct gate *gate)
 }
 
 
-bool get_pin_value(struct gate *gate, int pin_number)
+bool get_pin_value(struct gate *const gate, int pin_number)
 {
 	/* this is a bad way to handle errors. as there is no way to
 	 * differentiate between false values in gate and false returned due to
@@ -398,21 +373,21 @@ bool get_pin_value(struct gate *gate, int pin_number)
 }
 
 
-/* ginfo (gate info) functions to see/peek into gate's members.
+/*
+ * ginfo (gate info) functions to peek into gate's members.
  */
-
-size_t ginfo_capacity(struct gate *gate)
+size_t ginfo_capacity(struct gate *const gate)
 {
 	return gate ? gate->total_pins : 0;
 }
 
-short ginfo_class(struct gate *gate)
+short ginfo_class(struct gate *const gate)
 {
 	return gate ? gate->class : -1;
 }
 
 
-char *ginfo_tag(struct gate *gate)
+char *ginfo_tag(struct gate *const gate)
 {
 	if (!gate)
 		return NULL;
@@ -427,7 +402,7 @@ char *ginfo_tag(struct gate *gate)
 }
 
 
-bool ginfo_is_pin_set(struct gate *gate, int pin)
+bool ginfo_is_pin_set(struct gate *const gate, int pin)
 {
 	return gate && gate->pins[pin].type != NUL;
 }

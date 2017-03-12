@@ -43,15 +43,15 @@ static char *gate_names[] = {
 };
 
 /* */
-And create_And_gate(char *tag, size_t total_ip_pins);
-Or create_Or_gate(char *tag, size_t total_ip_pins);
-Not create_Not_gate(char *tag);
+And create_And_gate(const char *tag, size_t total_ip_pins);
+Or create_Or_gate(const char *tag, size_t total_ip_pins);
+Not create_Not_gate(const char *tag);
 
-Xor create_Xor_gate(char *tag, size_t total_ip_pins);
-Xnor create_Xnor_gate(char *tag, size_t total_ip_pins);
+Xor create_Xor_gate(const char *tag, size_t total_ip_pins);
+Xnor create_Xnor_gate(const char *tag, size_t total_ip_pins);
 
-Nor create_Nor_gate(char *tag, size_t total_ip_pins);
-Nand create_Nand_gate(char *tag, size_t total_ip_pins);
+Nor create_Nor_gate(const char *tag, size_t total_ip_pins);
+Nand create_Nand_gate(const char *tag, size_t total_ip_pins);
 
 
 /* sets the empty input slot of the given gate to the given truth value. This
@@ -59,9 +59,9 @@ Nand create_Nand_gate(char *tag, size_t total_ip_pins);
  * negative value (precisely -1) on failure.
  * failure.
  */
-int set_pin(struct gate *gate, bool truth);
+int set_pin(struct gate *const gate, bool truth);
 
-int unset_pin(struct gate *gate, int pin_number);
+int unset_pin(struct gate *const gate, int pin_number);
 
 /*
  * get_pin_value:
@@ -71,9 +71,9 @@ int unset_pin(struct gate *gate, int pin_number);
  * 	struct gate * => The gate you to retrieve the value from.
  * 	pin_number    => The slot of which you want to retrieve the output.
  */
-bool get_pin_value(struct gate *gate, int pin_number);
+bool get_pin_value(struct gate *const gate, int pin_number);
 
-void short_pins(struct gate *dst, int dst_pin, struct gate *src, int src_pin, char type);
+void short_pins(struct gate *const dst, int dst_pin, struct gate *const src, int src_pin, char type);
 
 /*
  * Description: Return the value of the output pin of given gate.
@@ -88,13 +88,13 @@ void short_pins(struct gate *dst, int dst_pin, struct gate *src, int src_pin, ch
  * 	e.g 1: bool xor_output = get_output(my_xor_gate);
  * 	e.g 2: printf("xor gate: %s", get_output(my_xor_gate) ? "truthy" : "falsi");
  */
-bool get_output(struct gate *);
+bool get_output(struct gate *const);
 
 
 /* this need to be called after dealing with gate.
  * CALLING THIS IS MANDATORY(if you don't want memory leaks).
  */
-void cleanup(struct gate *);
+void cleanup(struct gate *const);
 
 
 /* 
@@ -102,13 +102,13 @@ void cleanup(struct gate *);
  */
 
 /* returns the total number of input pins. Returns 0 on invalid inputs. */
-size_t ginfo_capacity(struct gate *);
+size_t ginfo_capacity(struct gate *const);
 /* returns the class the given gate belongs to. (-1) is returned when unable to
  * identify the class.*/
-short ginfo_class(struct gate *);
+short ginfo_class(struct gate *const);
 /* get the name of the gate, set while creating a gate. */
-char *ginfo_tag(struct gate *);
+char *ginfo_tag(struct gate *const);
 /* Takes gate and a pin number as argument. */
-bool ginfo_is_pin_set(struct gate *, int pin);
+bool ginfo_is_pin_set(struct gate *const, int pin);
 
 #endif
