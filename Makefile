@@ -1,5 +1,5 @@
 CC=gcc
-FLAGS=-Wall -std=gnu11 -pedantic-errors
+FLAGS=-Wall -std=c99 -pedantic-errors
 
 tmp: test
 	valgrind --tool=memcheck --leak-check=full ./op
