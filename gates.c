@@ -1,7 +1,7 @@
 /*
  * gates.c: Implementation of gates.h header.
  * @author: rmNULL
- * Version: 0.11
+ * Version: 0.10
  * LICENSE: MIT, refer LICENSE for more.
  * Description: see README.
  */
