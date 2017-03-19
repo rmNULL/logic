@@ -57,12 +57,19 @@ int main(int argc, char *argv[])
 void gate_class_tests(void)
 {
 	And and = create_And_gate("and", 4);
+	assert(and);
 	Or  or  = create_Or_gate("or", 4);
+	assert(or);
 	Not not = create_Not_gate("not");
+	assert(not);
 	Xor xor = create_Xor_gate("xor", 4);
+	assert(xor);
 	Xnor xn = create_Xnor_gate("xnor", 4);
+	assert(xn);
 	Nor nor = create_Nor_gate("nor", 4);
+	assert(nor);
 	Nand na = create_Nand_gate("na", 4);
+	assert(na);
 
 	assert(ginfo_class(na)  == NAND);
 	assert(ginfo_class(nor) == NOR);

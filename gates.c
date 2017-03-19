@@ -1,7 +1,7 @@
 /*
  * gates.c: Implementation of gates.h header.
  * @author: rmNULL
- * Version: 0.9
+ * Version: 0.11
  * LICENSE: MIT, refer LICENSE for more.
  * Description: see README.
  */
@@ -15,6 +15,8 @@
 
 /* default gate input method */
 #define NUL '\0'
+
+#define TAG_LEN 31
 
 struct gate_input_t {
 	union {
@@ -44,17 +46,12 @@ struct gate {
 };
 
 /*
- * mallocs a given ptr with size, exits on allocation failure. These kinds of exits are
- * not safe and are potential culprits of memory leaks. So, finding an
- * alternative to this method tops our TO-DO list.
+ * let user deal with failed memory allocations.
  */
-#define ALLOC_WITH_FAILURE_EXIT(ptr, size) do {\
+#define ALLOC_WITH_FAILURE_HANDLE(ptr, size) do {\
 	(ptr) = malloc(size); \
 	if ((ptr) == NULL) { \
-		/* yet to decide what needs to be done here. for now
-		 * let's exit. */ \
-		perror("AllocationError"); \
-		exit(EXIT_FAILURE); \
+		return NULL; \
 	}\
 } while(0)
 
@@ -64,6 +61,9 @@ struct gate {
 /* destructor */
 void cleanup(struct gate *const gate)
 {
+	if (gate == NULL)
+		return;
+
 	while (gate->unset_slots) {
 		free(slist_data(gate->unset_slots));
 		slist_remove_entry(&gate->unset_slots, gate->unset_slots);
@@ -80,7 +80,7 @@ void cleanup(struct gate *const gate)
  *
  * defines a function with gatename as the return type and taking total_ip_pins
  * as the argument; Minimum of 2 input pins need to be present. Returns NULL on
- * failure.
+ * allocation failure.
  */
 #define mdfn(gatename, cls) \
 gatename create_##gatename##_gate(const char *tag, size_t total_ip_pins) { \
@@ -90,8 +90,8 @@ gatename create_##gatename##_gate(const char *tag, size_t total_ip_pins) { \
 		fprintf(stderr, " %lu not in range [2..64].\n", total_ip_pins);\
 		return NULL;\
 	}\
-	ALLOC_WITH_FAILURE_EXIT(gate, sizeof(struct gate));\
-	ALLOC_WITH_FAILURE_EXIT(gate->pins, sizeof(struct gate_input_t) * total_ip_pins); \
+	ALLOC_WITH_FAILURE_HANDLE(gate, sizeof(struct gate));\
+	ALLOC_WITH_FAILURE_HANDLE(gate->pins, sizeof(struct gate_input_t) * total_ip_pins); \
 	gate->total_pins = total_ip_pins; \
 	gate->op = false; \
 	gate->current_pin = 0; \
@@ -106,8 +106,8 @@ gatename create_##gatename##_gate(const char *tag, size_t total_ip_pins) { \
 	for (int i = 0; i < total_ip_pins; ++i) { \
 		gate->pins[i].type = NUL; \
 	}\
-	size_t len = strnlen(tag, 31) + 1; /* +1 for the NUL byte. */ \
-	ALLOC_WITH_FAILURE_EXIT(gate->name, sizeof(char) * len);\
+	size_t len = strnlen(tag, TAG_LEN) + 1; /* +1 for the NUL byte. */ \
+	ALLOC_WITH_FAILURE_HANDLE(gate->name, sizeof(char) * len);\
 	strncpy(gate->name, tag, len);\
 	return gate; \
 }
@@ -133,20 +133,11 @@ mdfn(Nand, NAND)
  */
 Not create_Not_gate(const char *tag)
 {
-	Not gate;
-	ALLOC_WITH_FAILURE_EXIT(gate, sizeof(struct gate));
-	ALLOC_WITH_FAILURE_EXIT(gate->pins, sizeof(struct gate_input_t));
-
-	gate->pins[0].type = NUL;
-	size_t len = strnlen(tag, 31) + 1; /* +1 for the NUL byte. */
-	ALLOC_WITH_FAILURE_EXIT(gate->name, sizeof(char) * len);
-	strncpy(gate->name, tag, len);
-
+	/* TODO. here one extra memory block is allocated for input slot which is
+	 * never used, this kind of memory abuse is a sign of bad programming
+	 * and should be overcome. */
+	Not gate = create_And_gate(tag, 2);
 	gate->total_pins = 1;
-	gate->op = false;
-	gate->current_pin = 0;
-	gate->set_pins = 0;
-	gate->unset_slots = NULL;
 	gate->class = NOT;
 
 	return gate;
@@ -160,15 +151,20 @@ Not create_Not_gate(const char *tag)
  * Input:
  * 	struct gate * variable;
  * Return Value:
- * 	Pin number on successful run, '-1' on failure.
+ * 	Pin number on successful run.
+ * 	'-1' when an invalid gate is passed.
+ * 	'-2' when no empty slots.
  */
 static int find_pin_slot(struct gate *const gate)
 {
 	int current_pin;
 
+	if (gate == NULL)
+		return -1;
+
 	if (ARE_PINS_SET(gate)) {
 		/* fprintf(stderr, "Error in Gate %s: All pins set.\n", gate->name); */
-		return -1;
+		return -2;
 	}
 
 	if (gate->unset_slots != NULL) {
@@ -192,8 +188,9 @@ int set_pin(struct gate *const gate, bool truth)
 {
 	int current_pin;
 
-	if ((current_pin = find_pin_slot(gate)) == -1)
-		return -1;
+	if ((current_pin = find_pin_slot(gate)) == -1
+		|| current_pin == -2)
+		return current_pin;
 
 	gate->pins[current_pin].ip.pin = truth;
 	gate->pins[current_pin].type = INTERNAL;
@@ -227,7 +224,7 @@ void short_pins(struct gate *const dst, int dst_pin,
 	/* ERROR handling, hehe, more like error avoiding. */
 	if (src == NULL || dst == NULL) {
 		fputs("Pass a valid pointer.\n", stderr);
-		return;
+		return ;
 	}
 
 	if ((type) != SHORT_OUT && (type) != SHORT_IN) {
@@ -261,78 +258,87 @@ void short_pins(struct gate *const dst, int dst_pin,
 	dst->pins[dst_pin].type = type;
 
 	dst->set_pins++;
+
+	/* return 0; */
 }
 
 
-/*
- * perofrm the 'or' operation on a given gate and return it's result to be
- * processed by calculate_output.
- */
-static bool or_op(Or const gate)
-{
-	bool truth = false;
-	for (int i = 1; i < gate->total_pins; ++i)
-		truth |= get_pin_value(gate, i);
-	return truth;
-}
+/* logic function generator. */
+#define define_op_fn(logic_name, sym) \
+static int logic_name##_op(const struct gate *gate) \
+{\
+	if (gate == NULL)\
+		return -1;\
+	\
+	bool truth = get_pin_value(gate, 0);\
+	\
+	for (int i = 1; i < gate->total_pins; ++i)\
+		truth sym##= get_pin_value(gate, i);\
+	\
+	return truth;\
+}\
 
+define_op_fn(and, &)
+define_op_fn(or, |)
+define_op_fn(xor, ^)
+#undef define_op_fn
 
-/*
- * same as the above function except it performs 'and' operation.
- */
-static bool and_op(And const gate)
-{
-	bool truth = true;
+/* inverted function generator. */
+#define define_op_fn(logic_name, base_op) \
+static int logic_name##_op(const struct gate *gate) \
+{\
+	int truth = base_op;\
+	return truth == -1 ? truth : !truth;\
+}\
 
-	for (int i = 1; i < gate->total_pins; ++i)
-		truth &= get_pin_value(gate, i);
+define_op_fn(not, get_pin_value(gate, 0))
+define_op_fn(nor, or_op(gate)) 
+define_op_fn(nand, and_op(gate))
+define_op_fn(xnor, xor_op(gate))
 
-	return truth;
-}
-
-
-/*
- * similarly, perform 'xor' and return it's result for processing.
- */
-static bool xor_op(Xor const gate)
-{
-	bool truth = false;
-
-	for (int i = 1; i < gate->total_pins; ++i)
-		truth ^= get_pin_value(gate, i);
-	return truth;
-}
+#undef define_op_fn
+/* end of generated functions */
 
 
 /*
  * only calculates the gate output when all the inputs are set. Default case is
  * return faulty value.
  */
-static bool calculate_output(struct gate* const gate)
+static bool calculate_output(struct gate *gate)
 {
-	if (!ARE_PINS_SET(gate))
+	if (gate == NULL || !ARE_PINS_SET(gate))
 		return false;
 
-	bool truth = get_pin_value(gate, 0);
+	bool truth =
+		gate->class == OR   ?   or_op(gate) :
+		gate->class == AND  ?  and_op(gate) :
+		gate->class == NOT  ?  not_op(gate) :
+		gate->class == NOR  ?  nor_op(gate) :
+		gate->class == XOR  ?  xor_op(gate) :
+		gate->class == XNOR ? xnor_op(gate) :
+		gate->class == NAND ? nand_op(gate) :
+		false;
 
-	if (gate->class == AND)
-		truth &= and_op(gate);
-	else if (gate->class == OR)
-		truth |= or_op(gate);
-	else if (gate->class == NOT)
-		truth = !truth;
-	else if (gate->class == XOR)
-		truth ^= xor_op(gate);
-	else if (gate->class == XNOR)
-		truth = !(truth ^ xor_op(gate));
-	else if (gate->class == NOR)
-		truth = !(truth | or_op(gate));
-	else if (gate->class == NAND)
-		truth = !(truth & and_op(gate));
-	else { // almost no chance of getting here.(unless the library is modified)
-		fprintf(stderr, "Unknown gate class.\n");
-		truth = false;
-	}
+	/* bool truth = get_pin_value(gate, 0); */
+
+	/* if (gate->class == AND) */
+	/* 	truth &= and_op(gate); */
+	/* else if (gate->class == OR) */
+	/* 	truth |= or_op(gate); */
+	/* else if (gate->class == NOT) */
+	/* 	truth = !truth; */
+	/* else if (gate->class == XOR) */
+	/* 	truth ^= xor_op(gate); */
+	/* else if (gate->class == XNOR) */
+	/* 	truth = !(truth ^ xor_op(gate)); */
+	/* else if (gate->class == NOR) */
+	/* 	truth = !(truth | or_op(gate)); */
+	/* else if (gate->class == NAND) */
+	/* 	truth = !(truth & and_op(gate)); */
+	/* else { // almost no chance of getting here.(unless the library is modified) */
+	/* 	fprintf(stderr, "Unknown gate class.\n"); */
+	/* 	truth = false; */
+	/* } */
 
 	return truth;
 }
@@ -342,25 +348,27 @@ static bool calculate_output(struct gate* const gate)
  * 	Calls calculate_output() to perform the logic and sets the
  * 	result of the call to the output pin(gate->op) of the given gate.
  */
-bool get_output(struct gate *const gate)
+bool get_output(struct gate *gate)
 {
-	bool output;
 
-	output = calculate_output(gate);
+	bool output = calculate_output(gate);
 	gate->op = output;
 
 	return output;
 }
 
 
-bool get_pin_value(struct gate *const gate, int pin_number)
+int get_pin_value(const struct gate *gate, int pin_number)
 {
 	/* this is a bad way to handle errors. as there is no way to
 	 * differentiate between false values in gate and false returned due to
 	 * this exception.  TO-DO #2.
 	 */
-	if (gate == NULL || gate->pins[pin_number].type == NUL)
-		return false;
+	if (gate == NULL)
+		return -1;
+
+	if (gate->pins[pin_number].type == NUL)
+		return -2;
 
 	if (gate->pins[pin_number].type == INTERNAL)
 		return gate->pins[pin_number].ip.pin;
@@ -376,23 +384,22 @@ bool get_pin_value(struct gate *const gate, int pin_number)
 /*
  * ginfo (gate info) functions to peek into gate's members.
  */
-size_t ginfo_capacity(struct gate *const gate)
+size_t ginfo_capacity(const struct gate *const gate)
 {
-	return gate ? gate->total_pins : 0;
+	return gate ? gate->total_pins : -1;
 }
 
-short ginfo_class(struct gate *const gate)
+short ginfo_class(const struct gate *const gate)
 {
 	return gate ? gate->class : -1;
 }
 
-
-char *ginfo_tag(struct gate *const gate)
+char *ginfo_tag(const struct gate *const gate)
 {
-	if (!gate)
+	if (gate == NULL)
 		return NULL;
 
-	size_t len = strnlen(gate->name, 80) + 1; /* for the NUL byte */
+	size_t len = strnlen(gate->name, TAG_LEN) + 1; /* for the NUL byte */
 	char *tag = calloc(len, sizeof(char));
 	if (!tag)
 		return NULL;
@@ -402,7 +409,7 @@ char *ginfo_tag(struct gate *const gate)
 }
 
 
-bool ginfo_is_pin_set(struct gate *const gate, int pin)
+bool ginfo_is_pin_set(const struct gate *const gate, int pin)
 {
 	return gate && gate->pins[pin].type != NUL;
 }

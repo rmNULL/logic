@@ -38,7 +38,7 @@ typedef struct gate *Xnor;
 typedef struct gate *Nor;
 typedef struct gate *Nand;
 
-static char *gate_names[] = {
+static char *const gate_names[] = {
 	"NAND", "NOR", "XOR", "XNOR", "NOT", "OR", "AND"
 };
 
@@ -59,9 +59,9 @@ Nand create_Nand_gate(const char *tag, size_t total_ip_pins);
  * negative value (precisely -1) on failure.
  * failure.
  */
-int set_pin(struct gate *const gate, bool truth);
+int set_pin(struct gate *gate, bool truth);
 
-int unset_pin(struct gate *const gate, int pin_number);
+int unset_pin(struct gate *gate, int pin_number);
 
 /*
  * get_pin_value:
@@ -70,10 +70,15 @@ int unset_pin(struct gate *const gate, int pin_number);
  * Inputs:
  * 	struct gate * => The gate you to retrieve the value from.
  * 	pin_number    => The slot of which you want to retrieve the output.
+ * 	Output:
+ * 	  1: True
+ * 	  0: False
+ * 	 -1: Invalid gate passed.
+ * 	 -2: Given pin slot is not set.
  */
-bool get_pin_value(struct gate *const gate, int pin_number);
+int get_pin_value(const struct gate *, int pin_number);
 
-void short_pins(struct gate *const dst, int dst_pin, struct gate *const src, int src_pin, char type);
+void short_pins(struct gate *dst, int dst_pin, struct gate *src, int src_pin, char type);
 
 /*
  * Description: Return the value of the output pin of given gate.
@@ -88,13 +93,13 @@ void short_pins(struct gate *const dst, int dst_pin, struct gate *const src, int
  * 	e.g 1: bool xor_output = get_output(my_xor_gate);
  * 	e.g 2: printf("xor gate: %s", get_output(my_xor_gate) ? "truthy" : "falsi");
  */
-bool get_output(struct gate *const);
+bool get_output(struct gate *);
 
 
 /* this need to be called after dealing with gate.
  * CALLING THIS IS MANDATORY(if you don't want memory leaks).
  */
-void cleanup(struct gate *const);
+void cleanup(struct gate *);
 
 
 /* 
@@ -102,13 +107,13 @@ void cleanup(struct gate *const);
  */
 
 /* returns the total number of input pins. Returns 0 on invalid inputs. */
-size_t ginfo_capacity(struct gate *const);
+size_t ginfo_capacity(const struct gate *);
 /* returns the class the given gate belongs to. (-1) is returned when unable to
  * identify the class.*/
-short ginfo_class(struct gate *const);
+short ginfo_class(const struct gate *);
 /* get the name of the gate, set while creating a gate. */
-char *ginfo_tag(struct gate *const);
+char *ginfo_tag(const struct gate *);
 /* Takes gate and a pin number as argument. */
-bool ginfo_is_pin_set(struct gate *const, int pin);
+bool ginfo_is_pin_set(const struct gate *, int pin);
 
 #endif
