@@ -163,7 +163,6 @@ static int find_pin_slot(struct gate *const gate)
 		return -1;
 
 	if (ARE_PINS_SET(gate)) {
-		/* fprintf(stderr, "Error in Gate %s: All pins set.\n", gate->name); */
 		return -2;
 	}
 
@@ -318,27 +317,6 @@ static bool calculate_output(struct gate *gate)
 		gate->class == XNOR ? xnor_op(gate) :
 		gate->class == NAND ? nand_op(gate) :
 		false;
-
-	/* bool truth = get_pin_value(gate, 0); */
-
-	/* if (gate->class == AND) */
-	/* 	truth &= and_op(gate); */
-	/* else if (gate->class == OR) */
-	/* 	truth |= or_op(gate); */
-	/* else if (gate->class == NOT) */
-	/* 	truth = !truth; */
-	/* else if (gate->class == XOR) */
-	/* 	truth ^= xor_op(gate); */
-	/* else if (gate->class == XNOR) */
-	/* 	truth = !(truth ^ xor_op(gate)); */
-	/* else if (gate->class == NOR) */
-	/* 	truth = !(truth | or_op(gate)); */
-	/* else if (gate->class == NAND) */
-	/* 	truth = !(truth & and_op(gate)); */
-	/* else { // almost no chance of getting here.(unless the library is modified) */
-	/* 	fprintf(stderr, "Unknown gate class.\n"); */
-	/* 	truth = false; */
-	/* } */
 
 	return truth;
 }
