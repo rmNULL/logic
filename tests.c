@@ -32,7 +32,7 @@ void print_set_pins(struct gate *gate)
 
 	char *tag = ginfo_tag(gate);
 	printf(" %s :: %s\n", gate_names[ginfo_class(gate)], !(tag) ? "no gate name given" : tag);
-	for (int i = 0; i < ginfo_capacity(gate); ++i) {
+	for (unsigned int i = 0; i < ginfo_capacity(gate); ++i) {
 		truth = get_pin_value(gate, i);
 		printf("Pin%d: %s\n", i, truth ? "true" : "false");
 	}
@@ -43,7 +43,7 @@ void print_set_pins(struct gate *gate)
 }
 
 
-int main(int argc, char *argv[])
+int main(void)
 {
 	create_destroy_test();
 	gate_class_tests();
@@ -52,6 +52,7 @@ int main(int argc, char *argv[])
 	internal_Not_test();
 
 	not_and_shorted();
+
 }
 
 void gate_class_tests(void)
