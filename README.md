@@ -12,16 +12,16 @@
     source luke".
 
 ### To-do:
-2. When shorting output pins, sending the pin number of the source is redundant.
+1. When shorting output pins, sending the pin number of the source is redundant.
 Find a workaround.
     
-3. Write proper documentation.
+2. Write proper documentation.
 
-4. Write test cases for all scenarios.
+3. Write test cases for all scenarios.
 
-. Decide what to do with char *gate_names[] in header file. Move it to implementation file?
+4. Decide what to do with char *gate_names[] in header file. Move it to implementation file?
 
-6. update README.
+5. update README.
 
 
 ### Author(s):
