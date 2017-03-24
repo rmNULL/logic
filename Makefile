@@ -1,15 +1,22 @@
 CC=gcc
-FLAGS=-Wall -std=c99 -pedantic-errors
+FLAGS=-Wall -std=c99 -pedantic-errors -Wconversion
+LIB_PATH=./lib
+LIB_NAME=logic
+
+OBJ=gates.o ds/slist.o
 
 tmp: test
 	valgrind --tool=memcheck --leak-check=full ./op
 	make clean
 
-test: gates.o tests.c ds/slist.o
-	$(CC) $(FLAGS) $^ -o op
+test: $(LIB_PATH)/liblogic.a tests.c
+	$(CC) $(FLAGS) -L$(LIB_PATH) tests.c -o op -l$(LIB_NAME)
 
-gates.o: gates.c gates.h
+gates.o: gates.h gates.c ds/slist.o
 ds/slist.o: ds/slist.h ds/slist.c
 
+build: gates.o
+	ar -cvr lib/liblogic.a $(OBJ)
+
 clean:
-	$(RM) gates.o op a.out ds/slist.o
+	$(RM) op a.out $(OBJ)

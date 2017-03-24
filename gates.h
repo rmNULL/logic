@@ -38,7 +38,7 @@ typedef struct gate *Xnor;
 typedef struct gate *Nor;
 typedef struct gate *Nand;
 
-static char *const gate_names[] = {
+static const char *gate_names[] = {
 	"NAND", "NOR", "XOR", "XNOR", "NOT", "OR", "AND"
 };
 
@@ -56,8 +56,14 @@ Nand create_Nand_gate(const char *tag, size_t total_ip_pins);
 
 /* sets the empty input slot of the given gate to the given truth value. This
  * function returns the slot number of the gate that was set. Returns a
- * negative value (precisely -1) on failure.
- * failure.
+ * negative value(s) on failure.
+ * 
+ * Return value:
+ *  pin number of the currently set slot. 
+ *
+ *  Exception(s):
+ *  '-1': Invalid gate passed.
+ *  '-2': All slots are occupied.
  */
 int set_pin(struct gate *gate, bool truth);
 
@@ -76,7 +82,7 @@ int unset_pin(struct gate *gate, int pin_number);
  * 	 -1: Invalid gate passed.
  * 	 -2: Given pin slot is not set.
  */
-int get_pin_value(const struct gate *, int pin_number);
+int get_pin_value(const struct gate *, unsigned int pin_number);
 
 void short_pins(struct gate *dst, int dst_pin, struct gate *src, int src_pin, char type);
 
@@ -107,13 +113,14 @@ void cleanup(struct gate *);
  */
 
 /* returns the total number of input pins. Returns 0 on invalid inputs. */
-size_t ginfo_capacity(const struct gate *);
+short ginfo_capacity(const struct gate *);
 /* returns the class the given gate belongs to. (-1) is returned when unable to
  * identify the class.*/
 short ginfo_class(const struct gate *);
 /* get the name of the gate, set while creating a gate. */
 char *ginfo_tag(const struct gate *);
-/* Takes gate and a pin number as argument. */
-bool ginfo_is_pin_set(const struct gate *, int pin);
+/* checks if the given pin number is set.  Takes 'gate' and 'pin number' 
+ * as parameters.  */
+bool ginfo_is_pin_set(const struct gate *, unsigned int pin);
 
 #endif

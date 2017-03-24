@@ -37,9 +37,9 @@ void half_adder(void)
 		assert(set_pin(h.x, pinA) != -1);
 		assert(set_pin(h.x, pinB) != -1);
 
-		/* trying to set pin */
-		assert(set_pin(h.a, pinA) == -1);
-		assert(set_pin(h.x, pinA) == -1);
+		/* trying to set pins that are already set. */
+		assert(set_pin(h.a, pinA) == -2);
+		assert(set_pin(h.x, pinA) == -2);
 
 		sum   = get_output(h.x);
 		carry = get_output(h.a);
